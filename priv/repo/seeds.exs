@@ -5,7 +5,7 @@ alias OpenBanking.Repo
 merchants = [
   "Sainburys",
   "Uber",
-  "Neflix",
+  "Netflix",
   "Amazon",
   "Uber Eats",
   "Google",

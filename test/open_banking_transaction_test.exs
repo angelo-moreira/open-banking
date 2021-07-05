@@ -10,9 +10,9 @@ defmodule OpenBankingTransactionTest do
     {"sainsbury's sprmrkts lt london", "Sainburys"},
     {"uber help.uber.com", "Uber"},
     {"uber eats j5jgo help.uber.com ", "Uber Eats"},
-    {"netflix.com amsterdam", "Neflix"},
+    {"netflix.com amsterdam", "Netflix"},
     {"amazon eu sarl amazon.co.uk/", "Amazon"},
-    {"netflix.com 866-716-0414", "Neflix"},
+    {"netflix.com 866-716-0414", "Netflix"},
     {"uber eats 6p7n7 help.uber.com", "Uber Eats"},
     {"google *google g.co/helppay#", "Google"},
     {"amazon prime amzn.co.uk/pm", "Amazon Prime"},
@@ -38,6 +38,49 @@ defmodule OpenBankingTransactionTest do
       end)
 
     assert all_matched?
+  end
+
+  @tag :import
+  @tag :save
+  @tag :only
+  test "can load a CSV file and save it to the DB" do
+    res =
+      "test/transactions.csv"
+      |> Transaction.import!()
+      |> Transaction.insert_all()
+
+    assert {:ok, transactions} = res
+
+    all_matched? =
+      Enum.all?(@testing_data, fn {match_description, match_merchant} ->
+        Enum.find(transactions, fn %{description: description, merchant: merchant} ->
+          description == match_description && merchant == match_merchant
+        end)
+      end)
+
+    assert all_matched?
+  end
+
+  @tag :import
+  @tag :save
+  test "can load a CSV file but should return an error when saving" do
+    [first | _] = transactions = Transaction.import!("test/transactions.csv")
+
+    # It shouldn't never fail (famous last words) but let's make him fail :)
+    fail =
+      transactions
+      |> List.first()
+      |> Map.put(:confidence, "jklasjedkl")
+
+    transactions_failed =
+      transactions
+      |> List.replace_at(0, fail)
+      |> Transaction.insert_all()
+
+    assert {:error, transactions_failed}
+
+    {:error, [%Ecto.Changeset{} = failed_changeset]} = transactions_failed
+    assert failed_changeset.changes.description == first.description
   end
 
   @tag :match

@@ -7,9 +7,10 @@ defmodule OpenBanking.Transaction do
   """
 
   use Ecto.Schema
-  import Ecto.Query
+  import Ecto.{Query, Changeset}
 
   alias __MODULE__
+  alias Ecto.Multi
   alias OpenBanking.Merchant
   alias OpenBanking.Repo
   NimbleCSV.define(TransactionParser, separator: "\n", escape: "\"")
@@ -31,6 +32,14 @@ defmodule OpenBanking.Transaction do
     timestamps()
   end
 
+  @attrs [:description, :confidence, :merchant]
+
+  defp changeset(params) do
+    %Transaction{}
+    |> cast(params, @attrs)
+    |> validate_required(@attrs)
+  end
+
   def get_all, do: Repo.all(Merchant)
 
   @doc """
@@ -40,7 +49,7 @@ defmodule OpenBanking.Transaction do
 
   ## Example
 
-    %OpenBanking.Transaction.import!("test/transactions.csv")
+      iex> OpenBanking.Transaction.import!("test/transactions.csv")
 
   """
   @spec import!(Path.t()) :: list(t) | no_return
@@ -56,7 +65,24 @@ defmodule OpenBanking.Transaction do
     |> Enum.to_list()
   end
 
-  @spec match!(String.t()) :: list(t) | no_return
+  @doc """
+  ### Matches a description to a merchant
+
+  The decription should be a string, `match` will try to match it against a merchant
+  in the database and return a level of confidence, the matching algorithm uses trigrams
+  to try to find a good match.
+
+  If we send anything other than a valid string an exception will be raised, the ! in the
+  end of the function indicates that as it is a standard around the Elixir community and
+  its many libraries.
+
+  ## Examples
+
+      iex> OpenBanking.Transaction.match!("Netflix")
+      %{merchant: "Netflix", confidence: 1.0, description: "Netflix"}
+
+  """
+  @spec match!(String.t()) :: map() | no_return
   def match!(text_to_find) when is_bitstring(text_to_find) do
     match =
       Repo.one(
@@ -74,7 +100,7 @@ defmodule OpenBanking.Transaction do
       )
 
     if is_nil(match) do
-      %{description: text_to_find, merchant: "Unknown", confidence: 0}
+      %{description: text_to_find, merchant: "Unknown", confidence: 0.0}
     else
       match
     end
@@ -82,4 +108,59 @@ defmodule OpenBanking.Transaction do
 
   def match!(_),
     do: raise("To convert a description we need a text input")
+
+  @spec insert_all([map()]) :: {:ok, [t]} | {:error, [Changeset.t()]}
+  def insert_all([%{} | _] = maps) do
+    changesets_verification =
+      maps
+      |> Enum.map(&changeset/1)
+      |> verify_changesets_ok
+
+    case changesets_verification do
+      {:ok, changesets} ->
+        changesets
+        |> do_add_multi(Multi.new())
+        |> Repo.transaction()
+        |> transation_to_list
+
+      _ ->
+        changesets_verification
+    end
+  end
+
+  defp verify_changesets_ok(changesets) do
+    failed_changesets = Enum.reject(changesets, & &1.valid?)
+
+    if failed_changesets == [] do
+      {:ok, changesets}
+    else
+      {:error, failed_changesets}
+    end
+  end
+
+  # Gets a multi response and transforms it into a more standard response
+  # {:ok, data} or {:error, data}
+  defp transation_to_list({:ok, structs}) do
+    tags = structs |> Enum.map(&elem(&1, 1))
+    {:ok, tags}
+  end
+
+  defp transation_to_list(transaction),
+    do: transaction
+
+  # I don't usually document private functions but this is a recursive function :)
+  # we want to create a transition of inserts here, this way if we have an error
+  # in one of these changesets we can just roll back everything, fix the mistake
+  # and try again without having to worry what records were inserted before
+  # the failure, I think we should aim to have as consistent data as possible
+  defp do_add_multi(changesets, multi) do
+    if Enum.empty?(changesets) do
+      multi
+    else
+      [hd | tl] = changesets
+
+      new_multi = Multi.insert(multi, hd.changes.description, hd)
+      do_add_multi(tl, new_multi)
+    end
+  end
 end
