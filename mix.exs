@@ -43,7 +43,7 @@ defmodule OpenBanking.MixProject do
       setup: ["deps.get", "ecto.setup"],
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
-      test: ["ecto.reset --quiet", "ecto.migrate --quiet", "test"]
+      test: ["ecto.reset --quiet", "ecto.migrate --quiet", "test --trace"]
     ]
   end
 end
