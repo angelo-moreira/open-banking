@@ -109,6 +109,29 @@ defmodule OpenBanking.Transaction do
   def match!(_),
     do: raise("To convert a description we need a text input")
 
+  @doc """
+  ### Inserts a list of transactions in the DB
+
+  This function expects a list of maps to insert to the Database, it was originally
+  created to work alongside `import`, but it should be general enough to be used with
+  other cases found later.
+
+  You should get a `{:ok, list_of_transactions_structs}` if everything goes right.
+
+  ### Errors
+
+  If there is any error in any of the changesets it should return `{:error, changesets}`.
+
+  Only the transactions that errored should be returned to make it easier to fix those.
+
+  This should conform to community standards but the code had to do some changesets manipulation
+  in order to provide a cleaner API, I think it's an acceptable trade-off
+
+  ## Examples
+
+      iex> OpenBanking.Transaction.insert_all([%{merchant: "Denmark", confidence: 1.0, description: "The Great king of Denmark"}])
+
+  """
   @spec insert_all([map()]) :: {:ok, [t]} | {:error, [Changeset.t()]}
   def insert_all([%{} | _] = maps) do
     changesets_verification =

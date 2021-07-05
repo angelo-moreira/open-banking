@@ -42,7 +42,6 @@ defmodule OpenBankingTransactionTest do
 
   @tag :import
   @tag :save
-  @tag :only
   test "can load a CSV file and save it to the DB" do
     res =
       "test/transactions.csv"
