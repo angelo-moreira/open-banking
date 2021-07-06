@@ -10,7 +10,11 @@ config :open_banking, OpenBanking.Repo,
   password: "open_banking_pass",
   hostname: "localhost",
   port: 5444,
-  migration_source: "_migrations_for_db"
+  migration_source: "_migrations_for_db",
+  pool: Ecto.Adapters.SQL.Sandbox
+
+# we want to run the tests in the sandbox so we don't share
+# data between the tests
 
 # Print only warnings and errors during test
 config :logger, level: :warn
