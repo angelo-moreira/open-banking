@@ -109,6 +109,49 @@ defmodule OpenBanking.Transaction do
   def match!(_),
     do: raise("To convert a description we need a text input")
 
+  def get_all(opts) do
+    # let's put a limit otherwise people can be a bit silly
+    # 1000 is already very silly imo :)
+
+    Transaction
+    |> limit(1000)
+    |> do_get_all(opts)
+  end
+
+  def do_get_all(query, %{merchant: merchant} = opts) do
+    opts = Map.delete(opts, :merchant)
+
+    query
+    |> where([t], t.merchant == ^merchant)
+    |> do_get_all(opts)
+  end
+
+  def do_get_all(query, %{confidence_more: more_than} = opts) do
+    opts = Map.delete(opts, :confidence_more)
+
+    query
+    |> where([t], t.confidence >= ^more_than)
+    |> do_get_all(opts)
+  end
+
+  def do_get_all(query, %{confidence_less: less_than} = opts) do
+    opts = Map.delete(opts, :confidence_less)
+
+    query
+    |> where([t], t.confidence <= ^less_than)
+    |> do_get_all(opts)
+  end
+
+  def do_get_all(query, %{limit: limit} = opts) do
+    opts = Map.delete(opts, :limit)
+
+    query
+    |> limit(^limit)
+    |> do_get_all(opts)
+  end
+
+  def do_get_all(query, _), do: Repo.all(query)
+
   @doc """
   ### Inserts a list of transactions in the DB
 

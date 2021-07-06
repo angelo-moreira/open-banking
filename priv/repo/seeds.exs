@@ -17,6 +17,6 @@ merchants = [
 
 merchants
 |> Enum.map(&Repo.insert!(%Merchant{name: &1}))
-|> Enum.map(fn %{id: id, name: name} ->
+|> Enum.map(fn %{name: name} ->
   Repo.insert!(%Transaction{description: name, confidence: 1.0, merchant: name})
 end)

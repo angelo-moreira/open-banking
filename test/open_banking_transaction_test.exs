@@ -4,7 +4,13 @@ defmodule OpenBankingTransactionTest do
   use ExUnit.Case
   doctest OpenBanking.Transaction
 
+  alias Ecto.Adapters.SQL.Sandbox, as: SqlSandbox
+  alias OpenBanking.Repo
   alias OpenBanking.Transaction
+
+  setup do
+    :ok = SqlSandbox.checkout(OpenBanking.Repo)
+  end
 
   @testing_data [
     {"sainsbury's sprmrkts lt london", "Sainburys"},
@@ -92,5 +98,77 @@ defmodule OpenBankingTransactionTest do
   test "should return a valid merchant" do
     %{merchant: merchant} = Transaction.match!("google *google g.co/helppay#")
     assert merchant == "Google"
+  end
+
+  @tag :list
+  test "get_all with only merchant should work" do
+    Enum.map(1..3, fn _ ->
+      Repo.insert!(%Transaction{
+        confidence: 1.0,
+        merchant: "Disney",
+        description: "testing transaction"
+      })
+    end)
+
+    transactions = Transaction.get_all(%{limit: 2, merchant: "Disney"})
+
+    right_merchant? = Enum.all?(transactions, &(&1.merchant == "Disney"))
+    assert right_merchant?
+  end
+
+  @tag :list
+  test "get_all with limit and merchant should list 2 records" do
+    Enum.map(1..3, fn _ ->
+      Repo.insert!(%Transaction{
+        confidence: 1.0,
+        merchant: "Disney",
+        description: "testing transaction"
+      })
+    end)
+
+    transactions = Transaction.get_all(%{limit: 2, merchant: "Disney"})
+    assert length(transactions) == 2
+  end
+
+  @tag :list
+  test "get_all with confidence and merchant should work" do
+    samples = [
+      %Transaction{
+        confidence: 1.0,
+        merchant: "Disney",
+        description: "testing transaction"
+      },
+      %Transaction{
+        confidence: 0.9,
+        merchant: "Disney",
+        description: "testing transaction"
+      },
+      %Transaction{
+        confidence: 0.8,
+        merchant: "Disney",
+        description: "testing transaction"
+      },
+      %Transaction{
+        confidence: 0.7,
+        merchant: "Disney",
+        description: "testing transaction"
+      }
+    ]
+
+    Enum.map(samples, &Repo.insert!/1)
+
+    transactions = Transaction.get_all(%{confidence_more: 0.85, merchant: "Disney"})
+    assert length(transactions) == 2
+
+    transactions = Transaction.get_all(%{confidence_less: 0.85, merchant: "Disney"})
+    assert length(transactions) == 2
+
+    transactions =
+      Transaction.get_all(%{confidence_more: 0.85, confidence_less: 0.95, merchant: "Disney"})
+
+    assert length(transactions) == 1
+
+    [transaction] = transactions
+    assert transaction.confidence == 0.9
   end
 end
