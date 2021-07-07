@@ -15,5 +15,7 @@ defmodule OpenBanking.Merchant do
     timestamps()
   end
 
-  def get_all, do: Repo.all(Merchant)
+  def get_by_name(name) do
+    Repo.get_by(Merchant, name: name)
+  end
 end

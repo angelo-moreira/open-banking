@@ -44,8 +44,8 @@ defmodule OpenBanking.Transaction do
 
   @attrs [:description, :confidence, :merchant]
 
-  defp changeset(params) do
-    %Transaction{}
+  defp changeset(struct, params) do
+    struct
     |> cast(params, @attrs)
     |> validate_required(@attrs)
   end
@@ -142,7 +142,7 @@ defmodule OpenBanking.Transaction do
 
       iex> OpenBanking.Transaction.get_all(%{confidence_more: 0.85, merchant: "Netflix"})
 
-      iex> OpenBanking.Transaction.get_all(%{confidence_less: 0.10, limit: 5})
+      iex> OpenBanking.Transaction.get_all([confidence_less: 0.10, limit: 5])
 
       iex> OpenBanking.Transaction.get_all(%{merchant: "Unknown"})
 
@@ -228,7 +228,7 @@ defmodule OpenBanking.Transaction do
   def insert_all([%{} | _] = maps) do
     changesets_verification =
       maps
-      |> Enum.map(&changeset/1)
+      |> Enum.map(&changeset(%Transaction{}, &1))
       |> verify_changesets_ok
 
     case changesets_verification do
@@ -277,5 +277,65 @@ defmodule OpenBanking.Transaction do
       new_multi = Multi.insert(multi, hd.changes.description, hd)
       do_add_multi(tl, new_multi)
     end
+  end
+
+  @doc """
+  ### Approves transactions by id
+
+  So the algorithm can improve we would need some feedback about what's wrong and right
+  with the data, our match algorithms works with a "confidence level" based on trigrams
+  so the more help we get, the better will be able to assert results.
+
+  In a prod product we would want to expose an API and show a user interface to our helpdesk
+  staff that would interact with our API.
+
+  Once a transaction has been approved the level of confidence will be 100%
+
+  ## Examples
+
+      iex> OpenBanking.Transaction.approve(%{transaction_id: 1, merchant: "Netflix"})
+
+      iex> OpenBanking.Transaction.approve([transaction_id: 1, merchant: "Netflix"])
+
+  """
+  @spec approve(Keyword.t() | map()) :: {:ok, t} | {:error, String}
+  def approve(%{transaction_id: id, merchant: merchant})
+      when is_integer(id) and is_bitstring(merchant) do
+    transaction = Repo.get_by(Transaction, id: id)
+    merchant = Merchant.get_by_name(merchant)
+
+    cond do
+      is_nil(transaction) -> {:error, :transaction_id_not_found}
+      is_nil(merchant) -> {:error, :merchant_not_found}
+      true -> do_approve(transaction, %{merchant: merchant.name})
+    end
+  end
+
+  def approve(%{transaction_id: id}) when is_integer(id) do
+    transaction = Repo.get_by(Transaction, id: id)
+
+    if is_nil(transaction) do
+      {:error, :transaction_id_not_found}
+    else
+      do_approve(transaction, %{})
+    end
+  end
+
+  def approve(keywords) do
+    if Keyword.keyword?(keywords) do
+      keywords
+      |> Map.new()
+      |> approve()
+    else
+      {:error, {:wrong_input, "please run `h OpenBaking.approve to see the documentation`"}}
+    end
+  end
+
+  defp do_approve(struct, changes) do
+    changes_with_confidence = Map.put(changes, :confidence, 1.0)
+
+    struct
+    |> changeset(changes_with_confidence)
+    |> Repo.update()
   end
 end

@@ -199,4 +199,44 @@ defmodule OpenBankingTransactionTest do
 
     assert merchant == "Disney"
   end
+
+  @tag :approve
+  test "should approve a transaction without a merchant" do
+    %{id: inserted_id} =
+      Repo.insert!(%Transaction{
+        confidence: 1.0,
+        merchant: "Disney",
+        description: "testing transaction"
+      })
+
+    assert {:ok, transaction} = Transaction.approve(%{transaction_id: inserted_id})
+    assert transaction.confidence == 1.0
+  end
+
+  @tag :approve
+  test "should approve a transaction and change the merchant" do
+    %{id: inserted_id} =
+      Repo.insert!(%Transaction{
+        confidence: 1.0,
+        merchant: "Disney",
+        description: "testing transaction"
+      })
+
+    assert {:ok, transaction} =
+             Transaction.approve(%{transaction_id: inserted_id, merchant: "Netflix"})
+
+    assert transaction.confidence == 1.0
+  end
+
+  @tag :approve
+  test "approve a transaction should fail because the ID is incorrect" do
+    assert {:error, :transaction_id_not_found} =
+             Transaction.approve(%{transaction_id: 45_678_345_646_465_465})
+  end
+
+  @tag :approve
+  test "approve a transaction should fail because the merchant name is incorrect" do
+    assert {:error, :merchant_not_found} =
+             Transaction.approve(%{transaction_id: 1, merchant: "Non existing fairy tales"})
+  end
 end
