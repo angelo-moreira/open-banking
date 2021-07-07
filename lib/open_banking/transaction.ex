@@ -19,6 +19,16 @@ defmodule OpenBanking.Transaction do
   @type confidence :: Float.t()
   @type merchant :: String.t()
 
+  @typedoc """
+  This implementation models the Transaction struct, this should be a transaction returned
+  by a banking API.
+
+    * `description` - string representing the transaction
+    * `merchant` - company that receives the transaction, for example Github
+    * `confidence` - `1` for 100%, `0` for 0%. We might not always be able to assert with
+                      100% of confidence which merchant the transaction matches to.
+
+  """
   @type t :: %__MODULE__{
           description: description,
           confidence: confidence,
@@ -109,7 +119,36 @@ defmodule OpenBanking.Transaction do
   def match!(_),
     do: raise("To convert a description we need a text input")
 
-  def get_all(opts) do
+  @doc """
+  ### Gets transactions with options
+
+
+  #### Options:
+
+    * `merchant` - filters the results by merchant name (at the moment this is a naive implementation,
+       but we should really use something like Myers Difference here)
+    * `limit` - limits the results returned, just like SQL
+    * `confidence_more` - accepts a float that represents 1 as 100% and 0 as 0% and then filters the
+       results based on the confidence level that is bigger than the input
+    * `confidence_less` - accepts a float that represents 1 as 100% and 0 as 0% and then filters the
+       results based on the confidence level that is less than the input
+
+
+  This function sole responsibility is to give access to all the data in the database so helpdesk
+  staff can see the data that needs to be "fixed" and spot issues where the algorithm is not doing
+  a good enough job.
+
+  ## Examples
+
+      iex> OpenBanking.Transaction.get_all(%{confidence_more: 0.85, merchant: "Netflix"})
+
+      iex> OpenBanking.Transaction.get_all(%{confidence_less: 0.10, limit: 5})
+
+      iex> OpenBanking.Transaction.get_all(%{merchant: "Unknown"})
+
+  """
+  @spec get_all(Keyword.t() | map()) :: list(t)
+  def get_all(opts) when is_map(opts) do
     # let's put a limit otherwise people can be a bit silly
     # 1000 is already very silly imo :)
 
@@ -118,7 +157,17 @@ defmodule OpenBanking.Transaction do
     |> do_get_all(opts)
   end
 
-  def do_get_all(query, %{merchant: merchant} = opts) do
+  def get_all(opts) do
+    if Keyword.keyword?(opts) do
+      opts
+      |> Map.new()
+      |> get_all()
+    else
+      get_all(%{})
+    end
+  end
+
+  defp do_get_all(query, %{merchant: merchant} = opts) do
     opts = Map.delete(opts, :merchant)
 
     query
@@ -126,7 +175,7 @@ defmodule OpenBanking.Transaction do
     |> do_get_all(opts)
   end
 
-  def do_get_all(query, %{confidence_more: more_than} = opts) do
+  defp do_get_all(query, %{confidence_more: more_than} = opts) do
     opts = Map.delete(opts, :confidence_more)
 
     query
@@ -134,7 +183,7 @@ defmodule OpenBanking.Transaction do
     |> do_get_all(opts)
   end
 
-  def do_get_all(query, %{confidence_less: less_than} = opts) do
+  defp do_get_all(query, %{confidence_less: less_than} = opts) do
     opts = Map.delete(opts, :confidence_less)
 
     query
@@ -142,7 +191,7 @@ defmodule OpenBanking.Transaction do
     |> do_get_all(opts)
   end
 
-  def do_get_all(query, %{limit: limit} = opts) do
+  defp do_get_all(query, %{limit: limit} = opts) do
     opts = Map.delete(opts, :limit)
 
     query
@@ -150,7 +199,7 @@ defmodule OpenBanking.Transaction do
     |> do_get_all(opts)
   end
 
-  def do_get_all(query, _), do: Repo.all(query)
+  defp do_get_all(query, _), do: Repo.all(query)
 
   @doc """
   ### Inserts a list of transactions in the DB

@@ -171,4 +171,32 @@ defmodule OpenBankingTransactionTest do
     [transaction] = transactions
     assert transaction.confidence == 0.9
   end
+
+  @tag :list
+  test "get_all should work with keywords" do
+    samples = [
+      %Transaction{
+        confidence: 1.0,
+        merchant: "Disney",
+        description: "testing transaction"
+      },
+      %Transaction{
+        confidence: 0.9,
+        merchant: "Disney",
+        description: "testing transaction"
+      }
+    ]
+
+    Enum.map(samples, &Repo.insert!/1)
+
+    transactions = Transaction.get_all(merchant: "Disney", limit: 1)
+    assert length(transactions) == 1
+
+    merchant =
+      transactions
+      |> Enum.at(0)
+      |> Map.get(:merchant)
+
+    assert merchant == "Disney"
+  end
 end
