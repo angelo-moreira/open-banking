@@ -52,7 +52,7 @@ defmodule OpenBankingTransactionTest do
     res =
       "test/transactions.csv"
       |> Transaction.import!()
-      |> Transaction.insert_all()
+      |> Transaction.insert_all(%{})
 
     assert {:ok, transactions} = res
 
@@ -80,12 +80,58 @@ defmodule OpenBankingTransactionTest do
     transactions_failed =
       transactions
       |> List.replace_at(0, fail)
-      |> Transaction.insert_all()
+      |> Transaction.insert_all(%{})
 
     assert {:error, transactions_failed}
 
     {:error, [%Ecto.Changeset{} = failed_changeset]} = transactions_failed
     assert failed_changeset.changes.description == first.description
+  end
+
+  @tag :save_all
+  @tag :save_all_with_options
+  test "should only transactions with level of confidence the same or above 30%" do
+    confidence = 0.3
+
+    all_transactions = [
+      %{merchant: "Disney", confidence: 0.1, description: "Disney 10%"},
+      %{merchant: "Disney", confidence: 0.2, description: "Disney 20%"},
+      %{merchant: "Disney", confidence: 0.3, description: "Disney 30%"},
+      %{merchant: "Disney", confidence: 0.4, description: "Disney 40%"}
+    ]
+
+    assert {:ok, transactions} =
+             Transaction.insert_all(all_transactions, %{confidence_more: confidence})
+
+    assert length(transactions) == 2
+
+    above_30? =
+      Enum.all?(transactions, fn transaction -> transaction.confidence >= confidence end)
+
+    assert above_30?
+  end
+
+  @tag :save_all
+  @tag :save_all_with_options
+  test "should only transactions with level of confidence the same or below 20%" do
+    confidence = 0.2
+
+    all_transactions = [
+      %{merchant: "Disney", confidence: 0.1, description: "Disney 10%"},
+      %{merchant: "Disney", confidence: 0.2, description: "Disney 20%"},
+      %{merchant: "Disney", confidence: 0.3, description: "Disney 30%"},
+      %{merchant: "Disney", confidence: 0.4, description: "Disney 40%"}
+    ]
+
+    assert {:ok, transactions} =
+             Transaction.insert_all(all_transactions, %{confidence_less: confidence})
+
+    assert length(transactions) == 2
+
+    below_20? =
+      Enum.all?(transactions, fn transaction -> transaction.confidence <= confidence end)
+
+    assert below_20?
   end
 
   @tag :match
@@ -101,15 +147,35 @@ defmodule OpenBankingTransactionTest do
   end
 
   @tag :save_one
+  @tag :save_one_ok
   test "should save a record successfully " do
     res =
-      Transaction.insert_one(%{
-        merchant: "Fantasy Island",
-        description: "Testing transaction",
-        confidence: 0.8
-      })
+      Transaction.insert_one(
+        %{
+          merchant: "Fantasy Island",
+          description: "Testing transaction",
+          confidence: 0.8
+        },
+        %{}
+      )
 
     assert {:ok, transaction} = res
+  end
+
+  @tag :save_one
+  @tag :save_one_error
+  test "shouldn't save a record if confidence is not bigger than 30%" do
+    res =
+      Transaction.insert_one(
+        %{
+          merchant: "Fantasy Island",
+          description: "Testing transaction",
+          confidence: 0.8
+        },
+        %{confidence_more: 0.3}
+      )
+
+    assert {:ok, %Transaction{}} = res
   end
 
   @tag :list

@@ -35,6 +35,21 @@ defmodule OpenBanking.Transaction do
           merchant: merchant
         }
 
+  @typedoc """
+  Confidence level options, used for filtering, adding to the database, this is a crucial
+  concept that we want our users to understand, important enough to deserver it's own type
+
+    * `confidence_more` - `1` for 100%, `0` for 0%. Filters or adds transactions that are
+        equal or above this level of confidence
+
+    * `confidence_less` - `1` for 100%, `0` for 0%. Filters or adds transactions that are
+        equal or below this level of confidence
+  """
+  @type confidence_opts :: %{
+          confidence_more: float(),
+          confidence_less: float()
+        }
+
   schema "transaction" do
     field(:description, :string)
     field(:confidence, :float)
@@ -221,15 +236,17 @@ defmodule OpenBanking.Transaction do
       iex> OpenBanking.Transaction.insert_one(%{merchant: "Denmark", confidence: 1.0, description: "The Great king of Denmark"})
 
   """
-  @spec insert_one(map()) :: {:ok, t} | {:error, Changeset.t()}
-  def insert_one(%{} = map) do
-    res = insert_all([map])
+  @spec insert_one(map(), confidence_opts) :: {:ok, t} | {:error, Changeset.t()}
+  def insert_one(%{} = transaction, %{} = opts) do
+    res = insert_all([transaction], opts)
 
     case res do
       {:ok, [transaction]} -> {:ok, transaction}
       {:error, [changeset]} -> {:error, changeset}
     end
   end
+
+  def insert_one(_), do: {:error, :not_a_valid_map}
 
   @doc """
   ### Inserts a list of transactions in the DB
@@ -239,6 +256,13 @@ defmodule OpenBanking.Transaction do
   other cases found later.
 
   You should get a `{:ok, list_of_transactions_structs}` if everything goes right.
+
+  #### Options:
+
+  * `confidence_more` - accepts a float that represents 1 as 100% and 0 as 0% only transactions
+      that are equal or above the `confidence_more` threshold will be saved
+  * `confidence_less` - accepts a float that represents 1 as 100% and 0 as 0% only transactions
+      that are less or equal the `confidence_less` threshold will be saved
 
   ### Errors
 
@@ -251,11 +275,29 @@ defmodule OpenBanking.Transaction do
 
   ## Examples
 
-      iex> OpenBanking.Transaction.insert_all([%{merchant: "Denmark", confidence: 1.0, description: "The Great king of Denmark"}])
+      iex> OpenBanking.Transaction.insert_all([%{merchant: "Denmark", confidence: 1.0, description: "The Great king of Denmark"}], %{})
+
+      iex> OpenBanking.Transaction.insert_all([%{merchant: "Denmark", confidence: 1.0, description: "The Great king of Denmark"}], %{confidence_more: 0.3})
 
   """
-  @spec insert_all([map()]) :: {:ok, [t]} | {:error, [Changeset.t()]}
-  def insert_all([%{} | _] = maps) do
+  @spec insert_all([map()], confidence_opts) :: {:ok, [t]} | {:error, [Changeset.t()]}
+  def insert_all([%{} | _] = maps, %{confidence_more: equal_or_above} = opts) do
+    opts = Map.delete(opts, :confidence_more)
+
+    maps
+    |> Enum.filter(fn transaction -> transaction.confidence >= equal_or_above end)
+    |> insert_all(opts)
+  end
+
+  def insert_all([%{} | _] = maps, %{confidence_less: equal_or_below} = opts) do
+    opts = Map.delete(opts, :confidence_less)
+
+    maps
+    |> Enum.filter(fn transaction -> transaction.confidence <= equal_or_below end)
+    |> insert_all(opts)
+  end
+
+  def insert_all([%{} | _] = maps, %{}) do
     changesets_verification =
       maps
       |> Enum.map(&changeset(%Transaction{}, &1))
