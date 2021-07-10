@@ -47,7 +47,7 @@ defmodule OpenBankingTransactionTest do
   end
 
   @tag :import
-  @tag :save
+  @tag :save_all
   test "can load a CSV file and save it to the DB" do
     res =
       "test/transactions.csv"
@@ -67,7 +67,7 @@ defmodule OpenBankingTransactionTest do
   end
 
   @tag :import
-  @tag :save
+  @tag :save_all
   test "can load a CSV file but should return an error when saving" do
     [first | _] = transactions = Transaction.import!("test/transactions.csv")
 
@@ -98,6 +98,18 @@ defmodule OpenBankingTransactionTest do
   test "should return a valid merchant" do
     %{merchant: merchant} = Transaction.match!("google *google g.co/helppay#")
     assert merchant == "Google"
+  end
+
+  @tag :save_one
+  test "should save a record successfully " do
+    res =
+      Transaction.insert_one(%{
+        merchant: "Fantasy Island",
+        description: "Testing transaction",
+        confidence: 0.8
+      })
+
+    assert {:ok, transaction} = res
   end
 
   @tag :list
@@ -201,6 +213,7 @@ defmodule OpenBankingTransactionTest do
   end
 
   @tag :approve
+  @tag :approve_ok
   test "should approve a transaction without a merchant" do
     %{id: inserted_id} =
       Repo.insert!(%Transaction{
@@ -214,6 +227,7 @@ defmodule OpenBankingTransactionTest do
   end
 
   @tag :approve
+  @tag :approve_ok
   test "should approve a transaction and change the merchant" do
     %{id: inserted_id} =
       Repo.insert!(%Transaction{
@@ -229,12 +243,14 @@ defmodule OpenBankingTransactionTest do
   end
 
   @tag :approve
+  @tag :approve_error
   test "approve a transaction should fail because the ID is incorrect" do
     assert {:error, :transaction_id_not_found} =
              Transaction.approve(%{transaction_id: 45_678_345_646_465_465})
   end
 
   @tag :approve
+  @tag :approve_error
   test "approve a transaction should fail because the merchant name is incorrect" do
     assert {:error, :merchant_not_found} =
              Transaction.approve(%{transaction_id: 1, merchant: "Non existing fairy tales"})

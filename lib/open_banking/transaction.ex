@@ -202,6 +202,36 @@ defmodule OpenBanking.Transaction do
   defp do_get_all(query, _), do: Repo.all(query)
 
   @doc """
+  ### Inserts a single transactions to the DB
+
+  This function expects a map to be inserted to the Database.
+
+  It takes advantage of `insert_all` behind the scenes by wrapping the transaction
+  in a list, I think it's good for code reuse and it makes software simple with
+  less places for bugs.
+
+  You should get a `{:ok, struct}` if everything goes right.
+
+  ### Errors
+
+  If there is any error it should return `{:error, changeset}`.
+
+  ## Examples
+
+      iex> OpenBanking.Transaction.insert_one(%{merchant: "Denmark", confidence: 1.0, description: "The Great king of Denmark"})
+
+  """
+  @spec insert_one(map()) :: {:ok, t} | {:error, Changeset.t()}
+  def insert_one(%{} = map) do
+    res = insert_all([map])
+
+    case res do
+      {:ok, [transaction]} -> {:ok, transaction}
+      {:error, [changeset]} -> {:error, changeset}
+    end
+  end
+
+  @doc """
   ### Inserts a list of transactions in the DB
 
   This function expects a list of maps to insert to the Database, it was originally
