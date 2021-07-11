@@ -20,9 +20,9 @@ defmodule Mix.Tasks.OpenBanking.Import do
     * `-s`, `--save` - save the results to the database, if confidences flags are passed
       it will only save the results that match
     * `-f`, `--file` - specificies the file path in the system to import, needs to be a CSV file
-    * `-l`, `--confidence_less` - only returns the transactions that are below or equals a value
+    * `-cl`, `--confidence_less` - only returns the transactions that are below or equals a value
     ` from 0% to 100% represented by integers from 0 to 100
-    * `-m`, `--confidence_more` - only returns the transactions that are above or equals a value
+    * `-cm`, `--confidence_more` - only returns the transactions that are above or equals a value
     ` from 0% to 100% represented by integers from 0 to 100
 
   """
@@ -37,8 +37,8 @@ defmodule Mix.Tasks.OpenBanking.Import do
   @aliases [
     s: :save,
     f: :file,
-    l: :confidence_less,
-    m: :confidence_more
+    cl: :confidence_less,
+    cm: :confidence_more
   ]
 
   @doc false

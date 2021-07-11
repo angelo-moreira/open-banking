@@ -45,8 +45,7 @@ defmodule Mix.Tasks.OpenBanking do
     Help.run(["--search", "open_banking."])
 
     # mix open_banking.list --confidence-less 10 --confidence-more 20 --merchant="Uber" --limit 5
-    # mix open_banking.approve transaction-id sadhlsjdasd merchant="Uber"
-
+    # mix open_banking.approve --transaction-id sadhlsjdasd merchant="Uber"
     # mix open_banking.create_merchant "Cinderella"
   end
 end

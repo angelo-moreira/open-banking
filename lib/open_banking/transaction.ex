@@ -65,8 +65,6 @@ defmodule OpenBanking.Transaction do
     |> validate_required(@attrs)
   end
 
-  def get_all, do: Repo.all(Merchant)
-
   @doc """
   ### Import a file path for a CSV file
 
