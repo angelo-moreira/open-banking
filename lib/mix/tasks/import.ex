@@ -71,15 +71,30 @@ defmodule Mix.Tasks.OpenBanking.Import do
     |> print_to_terminal()
   end
 
-  defp do_convert_confidence(%{confidence_more: _} = opts) do
-    Map.update(opts, :confidence_more, 0, &(&1 / 100))
-  end
+  # converting integers from 0 to 100 to floats, from 0 to 1
+  # this is done to reuse the `import!` function and provide a nice easy API to use
+  defp do_convert_confidence(opts) do
+    case opts do
+      %{confidence_more: more_than, confidence_less: less_than} ->
+        more_than = more_than / 100
+        less_than = less_than / 100
 
-  defp do_convert_confidence(%{confidence_less: _} = opts) do
-    Map.update(opts, :confidence_less, 0, &(&1 / 100))
-  end
+        opts
+        |> Map.put(:confidence_more, more_than)
+        |> Map.put(:confidence_less, less_than)
 
-  defp do_convert_confidence(opts), do: opts
+      %{confidence_more: more_than} ->
+        more_than = more_than / 100
+        Map.put(opts, :confidence_more, more_than)
+
+      %{confidence_less: less_than} ->
+        less_than = less_than / 100
+        Map.put(opts, :confidence_less, less_than)
+
+      _ ->
+        opts
+    end
+  end
 
   defp do_import(%{file: file} = opts, _, _args) do
     opts
