@@ -34,7 +34,7 @@ defmodule OpenBankingTransactionTest do
 
   @tag :import
   test "can load a CSV file and match to merchants" do
-    matches = Transaction.import!("test/transactions.csv")
+    matches = Transaction.import!("test/transactions.csv", %{})
 
     all_matched? =
       Enum.all?(@testing_data, fn {match_description, match_merchant} ->
@@ -51,7 +51,7 @@ defmodule OpenBankingTransactionTest do
   test "can load a CSV file and save it to the DB" do
     res =
       "test/transactions.csv"
-      |> Transaction.import!()
+      |> Transaction.import!(%{})
       |> Transaction.insert_all(%{})
 
     assert {:ok, transactions} = res
@@ -69,7 +69,7 @@ defmodule OpenBankingTransactionTest do
   @tag :import
   @tag :save_all
   test "can load a CSV file but should return an error when saving" do
-    [first | _] = transactions = Transaction.import!("test/transactions.csv")
+    [first | _] = transactions = Transaction.import!("test/transactions.csv", %{})
 
     # It shouldn't never fail (famous last words) but let's make him fail :)
     fail =

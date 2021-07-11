@@ -72,13 +72,21 @@ defmodule OpenBanking.Transaction do
 
   The CSV File should have a return as a separator and use \ as an escape character
 
+  #### Options:
+
+    * `confidence_more` - accepts a float that represents 1 as 100% and 0 as 0% and then filters the
+        results based on the confidence level that is bigger than the input
+    * `confidence_less` - accepts a float that represents 1 as 100% and 0 as 0% and then filters the
+        results based on the confidence level that is less than the input
+
+
   ## Example
 
-      iex> OpenBanking.Transaction.import!("test/transactions.csv")
+      iex> OpenBanking.Transaction.import!("test/transactions.csv", %{})
 
   """
-  @spec import!(Path.t()) :: list(t) | no_return
-  def import!(file) when is_bitstring(file) do
+  @spec import!(Path.t(), confidence_opts) :: list(t) | no_return
+  def import!(file, opts = %{}) when is_bitstring(file) do
     match_to_merchant = fn [description] ->
       match!(description)
     end
@@ -88,7 +96,26 @@ defmodule OpenBanking.Transaction do
     |> TransactionParser.parse_stream()
     |> Stream.map(match_to_merchant)
     |> Enum.to_list()
+    |> do_import_filter_results(opts)
   end
+
+  defp do_import_filter_results(transactions, %{confidence_more: more_than} = opts) do
+    opts = Map.delete(opts, :confidence_more)
+
+    transactions
+    |> Enum.filter(&(&1.confidence >= more_than))
+    |> do_import_filter_results(opts)
+  end
+
+  defp do_import_filter_results(transactions, %{confidence_less: less_than} = opts) do
+    opts = Map.delete(opts, :confidence_less)
+
+    transactions
+    |> Enum.filter(&(&1.confidence <= less_than))
+    |> do_import_filter_results(opts)
+  end
+
+  defp do_import_filter_results(transactions, _), do: transactions
 
   @doc """
   ### Matches a description to a merchant
@@ -137,6 +164,9 @@ defmodule OpenBanking.Transaction do
   @doc """
   ### Gets transactions with options
 
+  This function sole responsibility is to give access to all the data in the database so helpdesk
+  staff can see the data that needs to be "fixed" and spot issues where the algorithm is not doing
+  a good enough job.
 
   #### Options:
 
@@ -147,11 +177,6 @@ defmodule OpenBanking.Transaction do
        results based on the confidence level that is bigger than the input
     * `confidence_less` - accepts a float that represents 1 as 100% and 0 as 0% and then filters the
        results based on the confidence level that is less than the input
-
-
-  This function sole responsibility is to give access to all the data in the database so helpdesk
-  staff can see the data that needs to be "fixed" and spot issues where the algorithm is not doing
-  a good enough job.
 
   ## Examples
 
@@ -280,7 +305,7 @@ defmodule OpenBanking.Transaction do
       iex> OpenBanking.Transaction.insert_all([%{merchant: "Denmark", confidence: 1.0, description: "The Great king of Denmark"}], %{confidence_more: 0.3})
 
   """
-  @spec insert_all([map()], confidence_opts) :: {:ok, [t]} | {:error, [Changeset.t()]}
+  @spec insert_all([map()], confidence_opts | map()) :: {:ok, [t]} | {:error, [Changeset.t()]}
   def insert_all([%{} | _] = maps, %{confidence_more: equal_or_above} = opts) do
     opts = Map.delete(opts, :confidence_more)
 
