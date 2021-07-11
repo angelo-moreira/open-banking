@@ -1,6 +1,7 @@
 defmodule Mix.Tasks.OpenBanking.Import do
   use Mix.Task
   import OpenBanking.Transaction, only: [import!: 2, insert_all: 2]
+  import Mix.Tasks.OpenBanking.Helper, only: [print_transaction: 1]
   require Logger
 
   @shortdoc "Reads a CSV file and shows a list of matches against previous seen transactions"
@@ -123,23 +124,6 @@ defmodule Mix.Tasks.OpenBanking.Import do
   defp do_maybe_save(transactions, _opts), do: transactions
 
   defp print_to_terminal(transactions) do
-    transactions
-    |> Enum.map(fn transaction ->
-      id =
-        if Map.has_key?(transaction, :id) do
-          transaction.id
-        else
-          "not saved"
-        end
-
-      """
-      ID: #{id}
-      Description: #{transaction.description}
-      Merchant: #{transaction.merchant}
-      Confidence: #{transaction.confidence * 100}
-      \n=======================\n
-      """
-    end)
-    |> Mix.shell().info()
+    Enum.map(transactions, &print_transaction/1)
   end
 end

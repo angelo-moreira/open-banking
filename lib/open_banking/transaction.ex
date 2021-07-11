@@ -261,7 +261,7 @@ defmodule OpenBanking.Transaction do
       iex> OpenBanking.Transaction.insert_one(%{merchant: "Denmark", confidence: 1.0, description: "The Great king of Denmark"})
 
   """
-  @spec insert_one(map(), confidence_opts) :: {:ok, t} | {:error, Changeset.t()}
+  @spec insert_one(map(), confidence_opts | map()) :: {:ok, t} | {:error, Changeset.t()}
   def insert_one(%{} = transaction, %{} = opts) do
     res = insert_all([transaction], opts)
 
