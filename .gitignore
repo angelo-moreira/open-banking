@@ -26,7 +26,6 @@ open_banking-*.tar
 /tmp/
 
 .elixir_ls
-.env
 
 .secrets/
 
