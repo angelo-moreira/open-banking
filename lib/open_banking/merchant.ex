@@ -7,6 +7,7 @@ defmodule OpenBanking.Merchant do
 
   use Ecto.Schema
   import Ecto.Changeset
+  alias OpenBanking.Transaction
 
   alias __MODULE__
   alias OpenBanking.Repo
@@ -46,10 +47,29 @@ defmodule OpenBanking.Merchant do
     Repo.get_by(Merchant, name: name)
   end
 
+  @doc """
+  Inserts a Merchant in the database, we should pass a map with a name key.
+
+  This function also creates a first transaction for that merchant, but we are not
+  checking if that's successful, this can obviously be improved.
+
+  ## Example
+
+      iex> OpenBanking.Merchant.insert_one(%{name: "Disney"})
+
+  """
   @spec insert_one(map()) :: {:ok, t()} | {:error, Ecto.Changeset.t()}
   def insert_one(merchant) do
-    %Merchant{}
-    |> changeset(merchant)
-    |> Repo.insert()
+    res =
+      %Merchant{}
+      |> changeset(merchant)
+      |> Repo.insert()
+
+    case res do
+      {:ok, %{name: merchant}} ->
+        Transaction.insert_one(%{merchant: merchant, description: merchant, confidence: 1.0})
+    end
+
+    res
   end
 end
