@@ -160,6 +160,7 @@ defmodule OpenBankingTransactionTest do
       )
 
     assert {:ok, transaction} = res
+    assert transaction.description == "Testing transaction"
   end
 
   @tag :save_one
