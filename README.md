@@ -22,6 +22,8 @@ I recommend installing and using Elixir with [asdf](https://github.com/asdf-vm/a
 
 Run `docker-compose up database` to initialise the database.
 
+Run `mix deps.get` in order to get and compile all packages needed
+
 Run `mix open_banking` to have a list of everything you can do within the application.
 
 ## Interacting with the program
