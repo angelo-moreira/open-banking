@@ -5,31 +5,15 @@ defmodule Mix.Tasks.OpenBanking do
   @shortdoc "Kinda terminal App but not quite :)"
 
   @moduledoc """
-  Shows the commands available for the app
+  Shows the available tasks for the app
 
       mix open_banking
 
-  If you are really running this in a iex shell (unlikely) you can run
-
-      Mix.Tasks.OpenBanking.run([])
-
   """
-
-  @switches [
-    save: :boolean,
-    confidence_less: :integer,
-    confidence_more: :integer
-  ]
-
-  @aliases [
-    s: :save,
-    l: :confidence_less,
-    m: :confidence_more
-  ]
 
   @doc false
   def run(args) do
-    {_opts, args} = OptionParser.parse!(args, switches: @switches, aliases: @aliases)
+    {_opts, args} = OptionParser.parse!(args, strict: [])
 
     case args do
       [] -> general()
@@ -43,7 +27,5 @@ defmodule Mix.Tasks.OpenBanking do
     Mix.shell().info("An Application to identify transactions with Merchants.")
     Mix.shell().info("\nAvailable tasks:\n")
     Help.run(["--search", "open_banking."])
-
-    # mix open_banking.create_merchant "Cinderella"
   end
 end
