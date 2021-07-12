@@ -1,7 +1,7 @@
 defmodule Mix.Tasks.OpenBanking.Import do
   use Mix.Task
   import OpenBanking.Transaction, only: [import!: 2, insert_all: 2]
-  import Mix.Tasks.OpenBanking.Helper, only: [print_transaction: 1]
+  import Mix.Tasks.OpenBanking.Helper, only: [print_transaction: 1, convert_confidence: 1]
   require Logger
 
   @shortdoc "Reads a CSV file and shows a list of matches against previous seen transactions"
@@ -66,35 +66,10 @@ defmodule Mix.Tasks.OpenBanking.Import do
     opts = Map.new(opts)
 
     opts
-    |> do_convert_confidence()
+    |> convert_confidence()
     |> do_import(nil, %{})
     |> do_maybe_save(opts)
     |> print_to_terminal()
-  end
-
-  # converting integers from 0 to 100 to floats, from 0 to 1
-  # this is done to reuse the `import!` function and provide a nice easy API to use
-  defp do_convert_confidence(opts) do
-    case opts do
-      %{confidence_more: more_than, confidence_less: less_than} ->
-        more_than = more_than / 100
-        less_than = less_than / 100
-
-        opts
-        |> Map.put(:confidence_more, more_than)
-        |> Map.put(:confidence_less, less_than)
-
-      %{confidence_more: more_than} ->
-        more_than = more_than / 100
-        Map.put(opts, :confidence_more, more_than)
-
-      %{confidence_less: less_than} ->
-        less_than = less_than / 100
-        Map.put(opts, :confidence_less, less_than)
-
-      _ ->
-        opts
-    end
   end
 
   defp do_import(%{file: file} = opts, _, _args) do
