@@ -53,7 +53,7 @@ defmodule Mix.Tasks.OpenBanking.Match do
       )
     end
 
-    Mix.shell().info("Matching file \n\n")
+    Mix.shell().info("Matching transaction description \n\n")
 
     opts = Map.new(opts)
 
